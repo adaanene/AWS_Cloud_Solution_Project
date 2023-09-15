@@ -1,6 +1,6 @@
 # AWS CLOUD SOLUTION FOR 2 COMPANY WEBSITES USING A REVERSE PROXY TECHNOLOGY
 
-scope: to build a secure infrastructure inside AWS VPC, using Nginx reverse proxy and application load balancer (ALB) to direct traffic between a Wordpress CMS website (main) and a Tooling website. The architecture set-up should look like this:
+scope: to build a secure infrastructure inside AWS VPC, using Nginx reverse proxy and application load balancer (ALB) to direct traffic between a Wordpress CMS website (main) and a Tooling website. The set-up architecture should look like this:
 
 ![digram](./screenshots/manual_implementation.png)
 
