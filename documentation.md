@@ -140,7 +140,7 @@ Create target groups for the Tooling. Nginx, Wordpress and Bastion servers
 
     - internet-facing
     - listens on HTTPS protocol
-    - in appropriate VPC, AZ and public subnets
+    - in appropriate AZ and public subnets
     - select ACM certificate for your domain name
     - select appropriate security groups
     - select Nginx instances as the target group
@@ -149,7 +149,7 @@ Create target groups for the Tooling. Nginx, Wordpress and Bastion servers
 2. Internal Application Load Balancer:
 
     - listens on HTTPS protocol
-    - in appropriate VPC, AZ and private subnets
+    - in appropriate AZ and private subnets
     - select ACM certificate for your domain name
     - select appropriate security groups
     - ensure that the health check path is `/healthstatus`
