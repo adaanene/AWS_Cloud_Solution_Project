@@ -181,7 +181,7 @@ Create target groups for the Tooling. Nginx, Wordpress and Bastion servers
 - Select the appropriate security group.
 
 
-### 10. CREATE RECORD IN ROUTE 53
+### 10. CREATE RECORDs IN ROUTE 53
 
 Create `Alias` or `CNAME` records for your Wordpress and Tooling websites. Direct their traffic to the `ELB` DNS name.
 
