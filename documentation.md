@@ -5,7 +5,7 @@ scope: to build a secure infrastructure inside AWS VPC, using Nginx reverse prox
 ![digram](./screenshots/manual_implementation.png)
 
 
-### PRE-REQUISITES
+### 1. CREATE A DOMAIN NAME
 
 - Create a free domain name [link](https://www.namecheap.com/).
 
@@ -15,7 +15,7 @@ scope: to build a secure infrastructure inside AWS VPC, using Nginx reverse prox
 **NOTE:** for every resource you create in this project always remember to add a tag and make sure to select the right vpc.
 
 
-### SET UP A VIRTUAL PRIVATE NETWORK (VPC)
+### 2. SET UP A VIRTUAL PRIVATE NETWORK (VPC)
 
 - Turn on `Enable DNS hostnames` in you VPC settings.
 
@@ -76,7 +76,7 @@ scope: to build a secure infrastructure inside AWS VPC, using Nginx reverse prox
         ![webservers](./screenshots/datalayer_inbound_rules.png)
 
 
-### 1. CREATE A CERTIFICATE FOR YOUR DOMAIN WITH AWS CERTIFICATE MANAGER (ACM)
+### 3. CREATE A CERTIFICATE FOR YOUR DOMAIN WITH AWS CERTIFICATE MANAGER (ACM)
 
 - Request a public certificate.
 
@@ -87,7 +87,7 @@ scope: to build a secure infrastructure inside AWS VPC, using Nginx reverse prox
 - Create a CNAME record in Route 53.
 
 
-### 2. CREATE A FILE SYSTEM WITH AMAZON EFS
+### 4. CREATE A FILE SYSTEM WITH AMAZON EFS
 
 - Ensure mount targets are placed in private subnets and select appropriate security group
 
@@ -100,7 +100,7 @@ scope: to build a secure infrastructure inside AWS VPC, using Nginx reverse prox
     - set **0755** permissions for root account.
 
 
-### 3. CREATE AND SET-UP A DATABASE WITH AMAZON RDS
+### 5. CREATE AND SET-UP A DATABASE WITH AMAZON RDS
 
 1. Create a key with AWS Key Management Service (KMS):
 
@@ -116,7 +116,7 @@ scope: to build a secure infrastructure inside AWS VPC, using Nginx reverse prox
 
 
 
-### 4. CREATE TARGET GROUPS
+### 6. CREATE TARGET GROUPS
 
 Create target groups for the Tooling. Nginx, Wordpress and Bastion servers
 
@@ -134,7 +134,7 @@ Create target groups for the Tooling. Nginx, Wordpress and Bastion servers
 - Register the relative instances as targets.
 
 
-### 5. CREATE LOAD BALANCERS
+### 7. CREATE LOAD BALANCERS
 
 1. External Application Load Balancer:
 
@@ -146,7 +146,7 @@ Create target groups for the Tooling. Nginx, Wordpress and Bastion servers
     - select Nginx instances as the target group
     - ensure that the health check path is `/healthstatus`
 
-2. Internal Application Load Balancer:
+8. Internal Application Load Balancer:
 
     - listens on HTTPS protocol
     - in appropriate AZ and private subnets
@@ -160,8 +160,7 @@ Create target groups for the Tooling. Nginx, Wordpress and Bastion servers
         ![host-header](./screenshots/host-header_rule.png)
 
 
-
-### 6. CREATE LAUNCH TEMPLATES
+### 9. CREATE LAUNCH TEMPLATES
 
 - Spin up 3 EC2 instances of RHEL 8 and for bastion, nginx and web-servers.
 
@@ -182,7 +181,7 @@ Create target groups for the Tooling. Nginx, Wordpress and Bastion servers
 - Select the appropriate security group.
 
 
-### 7. CREATE RECORD IN ROUTE 53
+### 10. CREATE RECORD IN ROUTE 53
 
 Create `Alias` or `CNAME` records for your Wordpress and Tooling websites. Direct their traffic to the `ELB` DNS name.
 
@@ -191,7 +190,7 @@ Create `Alias` or `CNAME` records for your Wordpress and Tooling websites. Direc
 Create other records for www.tooling.domain.com and wordpress
 
 
-### 8. CREATE AUTO-SCALING GROUPS
+### 11. CREATE AUTO-SCALING GROUPS
 
 - Create auto-scaling groups for Wordpres, Tooling, Nginx and Bastion instances.
 
