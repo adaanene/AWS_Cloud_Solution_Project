@@ -12,7 +12,7 @@ scope: to build a secure infrastructure inside AWS VPC, using Nginx reverse prox
 - Use Route 53 to set up a hosted zone mapped to your domain [link](https://www.youtube.com/watch?v=IjcHp94Hq8A).
 
 
-**NOTE:** for every resource you create in this project always remember to add a tag and make sure to select the right vpc.
+**NOTE:** for every resource you create in this project always remember to add a name-tag and make sure to select the right vpc.
 
 
 ### 2. SET UP A VIRTUAL PRIVATE NETWORK (VPC)
@@ -28,10 +28,10 @@ scope: to build a secure infrastructure inside AWS VPC, using Nginx reverse prox
     ![subnets](./screenshots/subnets.png)
 
 
-1. Create a **NAT gateway** - place it in a public subnet and associate an Elastic IPs.
+1. Create a **NAT gateway** - place it in a public subnet and associate it with an Elastic IP.
 
 
-2. Create a **public and private route table (rtb)** and associate them to the respective subnets.
+2. Create **public and private route tables (rtbs)** and associate them to the respective subnets.
 
     ![public_rtb](./screenshots/public_rtb.png)
 
@@ -40,9 +40,9 @@ scope: to build a secure infrastructure inside AWS VPC, using Nginx reverse prox
 
 8. Edit routes:
 
-    - public rtb: add a route so that every subnet associated to the this rtb can "talk" to the internet gateway from anywhere (but not viceversa) 
+    - public rtb: add a route so that every subnet associated to the this rtb can "talk" to the internet gateway from anywhere (but not vice-versa) 
 
-    - private rtb: add a route so that every private subnet can access the internet from anywhere via Nat gateway.
+    - private rtb: add a route so that every private subnet can access the internet from anywhere via the Nat gateway.
 
 
 9. Security groups:
@@ -104,11 +104,11 @@ scope: to build a secure infrastructure inside AWS VPC, using Nginx reverse prox
 
 1. Create a key with AWS Key Management Service (KMS):
 
-    -  Make the key symmetric, to encrypt and decrypt data, and select your account for key users and administrators.
+    -  Make the key symmetric, set it to encrypt and decrypt data, and select your account for key users and administrators.
 
 2. Create subnet groups for your database in Amazon RDS:
 
-    - Select both availability zones.
+    - Select VPC and both availability zones.
 
     - Select IP addresses for private subnets 3 and 4.
 
@@ -118,7 +118,7 @@ scope: to build a secure infrastructure inside AWS VPC, using Nginx reverse prox
 
 ### 6. CREATE TARGET GROUPS
 
-Create target groups for the Tooling. Nginx, Wordpress and Bastion servers
+Create target groups for Tooling, Nginx, Wordpress and Bastion servers.
 
 - Select "instances" as targets.
 
@@ -174,7 +174,7 @@ Create target groups for the Tooling. Nginx, Wordpress and Bastion servers
 
     ![ssl-conf-edit](./screenshots/apache_conf_certificate.png)
 
-- Create an AMI out of each instance and make launch templates out of the AMIs. Paste the code in README.md in template userdata. For Nginx make sure you edit the `reverse.conf` with the right `server_name, ssl certificate and key path, and DNS name for ILB`
+- Create an AMI out of each instance and make launch templates out of the AMIs. Paste the code in README.md in template userdata. For Nginx make sure you edit the `reverse.conf` with the right `server_name, ssl certificate and key paths, and DNS name for the ILB`
 
 - Ensure that the Tooling and Wordpress templates are deployed in private subnets 1 or 2, and Nginx and Bastion templates in public subnets 1 or 2.
 
@@ -192,7 +192,7 @@ Create other records for www.tooling.domain.com and wordpress
 
 ### 11. CREATE AUTO-SCALING GROUPS
 
-- Create auto-scaling groups for Wordpres, Tooling, Nginx and Bastion instances.
+- Create auto-scaling groups for Wordpress, Tooling, Nginx and Bastion instances.
 
 - Ensure to select the right template and security groups.
 

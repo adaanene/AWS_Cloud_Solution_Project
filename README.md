@@ -136,9 +136,11 @@ rm -rf /ACS-project-config
 **NOTE:** use access point for wordpress within NFS filesystem, the RDS endpoint of your database, the name, username and password for your wordpress database within MySQL.
 
 Change:
-`enpoint: project-15-database.cmpdna6xtofl.eu-west-2.rds.amazonaws.com
-access point: accesspoint=fsap-0c850690a4e5e8bd2 fs-00e875e0aa3feb6e3
-username: admin
+`enpoint: project-15-database.cmpdna6xtofl.eu-west-2.rds.amazonaws.com`
+
+`access point: accesspoint=fsap-0c850690a4e5e8bd2 fs-00e875e0aa3feb6e3`
+
+`username: admin
 password: admin12345
 database name: wordpressdb`
 
@@ -179,9 +181,11 @@ sudo systemctl restart httpd
 **NOTE:** use access point of your tooling filesystem, the RDS endpoint of your database, the name, username and password for your tooling database within MySQL 
 
 Change:
-`enpoint: project-15-database.cmpdna6xtofl.eu-west-2.rds.amazonaws.com
-access point: accesspoint=fsap-059fb9b0214742c05 fs-00e875e0aa3feb6e3
-username: admin
+`enpoint: project-15-database.cmpdna6xtofl.eu-west-2.rds.amazonaws.com`
+
+`access point: accesspoint=fsap-059fb9b0214742c05 fs-00e875e0aa3feb6e3`
+
+`username: admin
 password: admin12345
 database name: toolingdb`
 
