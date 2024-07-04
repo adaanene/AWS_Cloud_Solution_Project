@@ -1,219 +1,184 @@
+# AWS CLOUD SOLUTION FOR 2 COMPANY WEBSITES USING A REVERSE PROXY TECHNOLOGY
+
 **WARNING:** this project uses AWS resources that are not covered by AWS free tier so it is strongly recommended to set up an AWS budget and notifications for when spending reaches a predefined limit and to delete all resources at the end of the project
 
-**NOTE:** The steps carried out for this project implementation are found in documentation.md
-## Bastion AMI
+**SCOPE**: to build a secure infrastructure inside AWS VPC, using Nginx reverse proxy and application load balancer (ALB) to direct traffic between a Wordpress CMS website (main) and a Tooling website. The set-up architecture should look like this:
 
-```
-sudo su -
-sudo dnf update -y
-sudo dnf install python3 -y
+![digram](./screenshots/manual_implementation.png)
 
-yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+## DOMAIN NAME
 
-yum install -y dnf-utils http://rpms.remirepo.net/enterprise/remi-release-8.rpm
+- Create a free domain name [link](https://www.namecheap.com/).
 
-yum install wget vim telnet htop git mysql net-tools chrony -y
+- Use Route 53 to set up a hosted zone mapped to your domain [link](https://www.youtube.com/watch?v=IjcHp94Hq8A).
 
-systemctl start chronyd
+**NOTE:** for every resource you create in this project always remember to add a name-tag and make sure to select the right vpc.
 
-systemctl enable chronyd
+## VIRTUAL PRIVATE NETWORK (VPC)
 
-``````
+- Turn on `Enable DNS hostnames` in you VPC settings.
 
+- Create an **Internet gateway** and attach it to VPC.
 
-## Nginx AMI
+- Create 6 subnets across two availability zones (AZs)
 
-```
-sudo su -
-sudo dnf update -y
-sudo dnf install python3 -y
+    ![subnets](./screenshots/subnets.png)
 
-yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+1. Create a **NAT gateway** - place it in a public subnet and associate it with an Elastic IP.
 
-yum install -y dnf-utils http://rpms.remirepo.net/enterprise/remi-release-8.rpm
+2. Create **public and private route tables (rtbs)** and associate them to the respective subnets.
 
-yum install wget vim telnet htop git mysql net-tools chrony -y
+    ![public_rtb](./screenshots/public_rtb.png)
 
-systemctl start chronyd
+    ![private_rtb](./screenshots/private_rtb.png)
 
-systemctl enable chronyd
-```
+3. Edit routes:
 
-## Webservers AMI
+    - public rtb: add a route so that every subnet associated to the this rtb can "talk" to the internet gateway from anywhere (but not vice-versa)
 
-```
-sudo su -
-sudo dnf update -y
-sudo dnf install python3 -y
+    - private rtb: add a route so that every private subnet can access the internet from anywhere via the Nat gateway.
 
-yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+4. Security groups:
 
-yum install -y dnf-utils http://rpms.remirepo.net/enterprise/remi-release-8.rpm
+    - **External-LB**: allow access from anywhere in the internet.
 
-yum install wget vim telnet htop git mysql net-tools chrony php -y
+        ![ext-alb](./screenshots/ext_alb_inbound_rules.png)
 
-systemctl start chronyd
+    - **Bastion**: allow SSH access from your workstation.
 
-systemctl enable chronyd
-```
+        ![bastion](./screenshots/bastion_inbound_rules.png)
 
+    - **Nginx reverse proxy**: allow access from  ELB and bastion (select source using security groups for bastion and ELB).
 
-## Configure selinux policies - webservers and nginx server
+        ![nginx](./screenshots/nginx_inbound_rules.png)
 
-```
-setsebool -P httpd_can_network_connect=1
-setsebool -P httpd_can_network_connect_db=1
-setsebool -P httpd_execmem=1
-setsebool -P httpd_use_nfs 1
-```
+    - **Internal-LB**: allow access from Nginx proxy servers.
 
+        ![ext-alb](./screenshots/int_alb_inbound_rules.png)
 
-## Install aws efs-utils for mounts - nginx and webservers
+    - **Web-servers**: allow access from ILB and bastion.
 
-```
-git clone https://github.com/aws/efs-utils
-cd efs-utils
-yum install -y make
-yum install rpm-build -y
-make rpm
-yum install -y ./build/amazon-efs-utils*rpm
-```
+        ![webservers](./screenshots/webservers_inbound_rules.png)
 
-## Set up self-signed certificate for nginx server
+    - **Data-layer**: this is for databases and EFS:
+        - Allow access to databases only from web-servers and bastion.
+        - Allow access to EFS mount-point for web-servers.
 
-``````
-sudo mkdir /etc/ssl/private
+        ![webservers](./screenshots/datalayer_inbound_rules.png)
 
-sudo chmod 700 /etc/ssl/private
+## AWS CERTIFICATE MANAGER (ACM)
 
-sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/nginx-selfsigned.key -out /etc/ssl/certs/nginx-selfsigned.crt
+- Request a public certificate
 
-sudo openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
-``````
+- For commodity use a wildcard for your domain name e.g. if your domain name is thrive.com enter *.thrive.com - this means that any subdomain to your domain will have the certificate.
 
+- Enable DNS validation and RSA encryption
 
-## Set up self-signed certificate for the webservers 
+- Create a CNAME record in Route 53
 
-```
-yum install -y mod_ssl
+## AMAZON EFS FilE SYSTEM
 
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/pki/tls/private/apache-selfsigned.key -out /etc/pki/tls/certs/apache-selfsigned.crt
+- Ensure mount targets are placed in private subnets and select appropriate security group
 
-vi /etc/httpd/conf.d/ssl.conf 
-```
+- Create two access points for the Wordpress and Tooling websites:
+  - Set root directory path */wordpress* and */tooling* respectively
+  - set POSIX USER using root **UserID=0 GroupID=0**
+  - set **0755** permissions for root account
 
+## AMAZON RDS DATABASE
 
-## Bastion userdata
+1. Create a key with AWS Key Management Service (KMS):
+    - Make the key symmetric, set it to encrypt and decrypt data, and select your account for key users and administrators
 
-``````
-#!/bin/bash
-yum update -y
-yum install ansible git -y
-``````
+2. Create subnet groups for your database in Amazon RDS:
+    - Select VPC and both availability zones
+    - Select IP addresses for private subnets 3 and 4
 
-## Nginx userdata
+3. Create database - set master username and password, and associate it to appropriate security groups
 
-``````
-#!/bin/bash
-sudo yum install -y nginx
-sudo systemctl start nginx
-sudo systemctl enable nginx
-git clone https://github.com/adaanene/ACS-project-config.git
-mv /ACS-project-config/reverse.conf /etc/nginx/
-mv /etc/nginx/nginx.conf /etc/nginx/nginx.conf-distro
-cd /etc/nginx/
-touch nginx.conf
-sed -n 'w nginx.conf' reverse.conf
-sudo systemctl restart nginx
-rm -rf reverse.conf
-rm -rf /ACS-project-config
+## TARGET GROUPS
 
-``````
+Create target groups for Tooling, Nginx, Wordpress and Bastion servers.
 
+- Select "instances" as targets.
 
-## Wordpress userdata
+- Ensure that these protocols are enabled:
+  - Nginx: HTTPS port 443
+  - Wordpress: HTTPS port 443
+  - Tooling: HTTPS port 443
+  - Bastion: TCP port 22
 
-**NOTE:** use access point for wordpress within NFS filesystem, the RDS endpoint of your database, the name, username and password for your wordpress database within MySQL.
+- Ensure that the health check path is `/healthstatus`.
 
-Change:
-`enpoint: project-15-database.cmpdna6xtofl.eu-west-2.rds.amazonaws.com`
+- Register the relative instances as targets.
 
-`access point: accesspoint=fsap-0c850690a4e5e8bd2 fs-00e875e0aa3feb6e3`
+## LOAD BALANCERS
 
-`username: admin
-password: admin12345
-database name: wordpressdb`
+1. External Application Load Balancer:
 
-``````
-#!/bin/bash
-sudo yum update -y
-mkdir /var/www/
-sudo mount -t efs -o tls,accesspoint=fsap-0c850690a4e5e8bd2 fs-00e875e0aa3feb6e3:/ /var/www/
-sudo yum install -y httpd 
-sudo systemctl start httpd
-sudo systemctl enable httpd
-sudo yum module reset php -y
-sudo yum module enable php:remi-7.4 -y
-sudo yum install -y php php-common php-mbstring php-opcache php-intl php-xml php-gd php-curl php-mysqlnd php-fpm php-json
-sudo systemctl start php-fpm
-sudo systemctl enable php-fpm
-wget http://wordpress.org/latest.tar.gz
-tar xzvf latest.tar.gz
-rm -rf latest.tar.gz
-cp wordpress/wp-config-sample.php wordpress/wp-config.php
-mkdir /var/www/html/
-cp -R /wordpress/* /var/www/html/
-cd /var/www/html/
-touch healthstatus
-sed -i "s/localhost/project-15-database.cmpdna6xtofl.eu-west-2.rds.amazonaws.com/g" wp-config.php 
-sed -i "s/username_here/admin/g" wp-config.php 
-sed -i "s/password_here/admin12345/g" wp-config.php 
-sed -i "s/database_name_here/wordpressdb/g" wp-config.php 
-sudo chcon -t httpd_sys_rw_content_t /var/www/html/ -R
-sudo systemctl restart httpd
+    - internet-facing
+    - listens on HTTPS protocol
+    - in appropriate AZ and public subnets
+    - select ACM certificate for your domain name
+    - select appropriate security groups
+    - select Nginx instances as the target group
+    - ensure that the health check path is `/healthstatus`
 
-``````
+2. Internal Application Load Balancer:
 
+    - listens on HTTPS protocol
+    - in appropriate AZ and private subnets
+    - select ACM certificate for your domain name
+    - select appropriate security groups
+    - ensure that the health check path is `/healthstatus`
+    - select web-server instances as the target group:
+        - one of the web-servers has to be set to default
+        - configure a rule to forward requests to the other web-server: a good way to do this is with `Host header`, so if wordpress server is default when never the host header is tooling.domain.com or www.tooling.domain.com requests will be forwarded to the tooling server
 
+            ![host-header](./screenshots/host-header_rule.png)
 
-## Tooling userdata
+### LAUNCH TEMPLATES
 
-**NOTE:** use access point of your tooling filesystem, the RDS endpoint of your database, the name, username and password for your tooling database within MySQL 
+- Spin up 3 EC2 instances of RHEL 8 and for bastion, nginx and web-servers.
 
-Change:
-`enpoint: project-15-database.cmpdna6xtofl.eu-west-2.rds.amazonaws.com`
+    `AMI: RHEL-8.6.0_HVM-20220503-x86_64-2-Hourly2-GP2 (ami-035c5dc086849b5de)`
 
-`access point: accesspoint=fsap-059fb9b0214742c05 fs-00e875e0aa3feb6e3`
+- Refer to the notes is README.md to set up the resources and necessary certificates in each instance.
 
-`username: admin
-password: admin12345
-database name: toolingdb`
+    [Self-signed certificate for Nginx and Apache](https://www.digitalocean.com/community/tutorials/how-to-create-a-self-signed-ssl-certificate-for-nginx-on-centos-7)
 
-``````
-#!/bin/bash
-mkdir /var/www/
-sudo mount -t efs -o tls,accesspoint=fsap-059fb9b0214742c05 fs-00e875e0aa3feb6e3:/ /var/www/
-sudo yum install -y httpd 
-sudo systemctl start httpd
-sudo systemctl enable httpd
-sudo yum module reset php -y
-sudo yum module enable php:remi-7.4 -y
-sudo yum install -y php php-common php-mbstring php-opcache php-intl php-xml php-gd php-curl php-mysqlnd php-fpm php-json
-sudo systemctl start php-fpm
-sudo systemctl enable php-fpm
-git clone https://github.com/adaanene/tooling-1.git
-mkdir /var/www/html
-cp -R /tooling-1/html/*  /var/www/html/
-cd /tooling-1
-mysql -h project-15-database.cmpdna6xtofl.eu-west-2.rds.amazonaws.com -u admin -p toolingdb < tooling-db.sql
-cd /var/www/html/
-touch healthstatus
-sed -i "s/$db = mysqli_connect('mysql.tooling.svc.cluster.local', 'admin', 'admin', 'tooling');/$db = mysqli_connect('project-15-database.cmpdna6xtofl.eu-west-2.rds.amazonaws.com', 'admin', 'admin12345', 'toolingdb');/g" functions.php
-sudo chcon -t httpd_sys_rw_content_t /var/www/html/ -R
-sudo systemctl restart httpd
+- Edit the ssl configuration file within the Apache server  `/etc/httpd/conf.d/ssl.conf`.
 
-``````
+    ![ssl-conf-edit](./screenshots/apache_conf_certificate.png)
 
-### REFERENCES
+- Create an AMI out of each instance and make launch templates out of the AMIs. Paste the code in README.md in template userdata. For Nginx make sure you edit the `reverse.conf` with the right `server_name, ssl certificate and key paths, and DNS name for the ILB`
 
-[Self-signed certificate for Nginx and Apache](https://www.digitalocean.com/community/tutorials/how-to-create-a-self-signed-ssl-certificate-for-nginx-on-centos-7)
+- Ensure that the Tooling and Wordpress templates are deployed in private subnets 1 or 2, and Nginx and Bastion templates in public subnets 1 or 2.
+
+- Select the appropriate security group.
+
+## ROUTE 53 RECORDS
+
+Create `Alias` or `CNAME` records for your Wordpress and Tooling websites. Direct their traffic to the `ELB` DNS name.
+
+![alias](./screenshots/record_alias.png)
+
+Create other records for www.tooling.domain.com and wordpress
+
+## AUTO-SCALING GROUPS
+
+- Create auto-scaling groups for Wordpress, Tooling, Nginx and Bastion instances.
+
+- Ensure to select the right template and security groups.
+
+- AZ: Nginx and Bastion in public subnet 1 and 2 and web-servers in private subnets 1 and 2
+
+- For Nginx and web-servers attach each auto-scaling group to the appropriate LB and turn on Elastic Load Balancing health checks
+
+- Health check grace period: ensure there is enough time before a health check to allow instances to  update, download and initialize resources (such as Nginx) because otherwise it can lead to instances being tagged for failure and terminated
+
+- Set scale out if CPU utilization reaches 90%
+
+- Ensure there is an SNS topic to send scaling notifications
+
+Make sure that instances are  in a `healthy` state in each target group then head over to your websites from your browser. Ensure that your configuration is working for all websites and when you use a different host header e.g. www.wordpress.domain.com or wordpress.domain.com
