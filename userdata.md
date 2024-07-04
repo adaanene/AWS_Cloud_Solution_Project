@@ -54,7 +54,7 @@ systemctl start chronyd
 systemctl enable chronyd
 ```
 
-## Configure selinux policies - webservers and nginx server
+## Configure selinux policies - web servers and nginx server
 
 ```n
 setsebool -P httpd_can_network_connect=1
@@ -96,7 +96,7 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/pki/tls/private
 vi /etc/httpd/conf.d/ssl.conf 
 ```
 
-## Bastion userdata
+## Bastion user data
 
 ``````n
 #!/bin/bash
@@ -104,7 +104,7 @@ yum update -y
 yum install ansible git -y
 ``````
 
-## Nginx userdata
+## Nginx user data
 
 ``````n
 #!/bin/bash
@@ -123,7 +123,7 @@ rm -rf /ACS-project-config
 
 ``````
 
-## Wordpress userdata
+## Wordpress user data
 
 **NOTE:** use access point for wordpress within NFS filesystem, the RDS endpoint of your database, the name, username and password for your wordpress database within MySQL.
 
@@ -165,7 +165,7 @@ sudo chcon -t httpd_sys_rw_content_t /var/www/html/ -R
 sudo systemctl restart httpd
 ``````
 
-## Tooling userdata
+## Tooling user data
 
 **NOTE:** use access point of your tooling filesystem, the RDS endpoint of your database, the name, username and password for your tooling database within MySQL
 
